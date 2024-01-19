@@ -1,0 +1,29 @@
+- name: Default skel files | Check that files/skel/ the exists
+  ansible.builtin.find:
+    paths: files/skel/
+    file_type: file
+  register: custom_skel_files
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Ensure rsync is installed on Ubuntu or Debian
+  ansible.builtin.apt:
+    name: rsync
+    state: present
+  when:
+    - ansible_distribution in ['Ubuntu', 'Debian']
+    - custom_skel_files.files | length > 0
+    - custom_skel_files.matched > 0  # Ensure that files were found
+  become: true
+
+- name: Synchronize skel directory to all target servers without deleting existing files
+  ansible.posix.synchronize:
+    src: skel/
+    dest: /etc/skel/
+    recursive: true
+    delete: false
+  when:
+    - custom_skel_files.files | length > 0
+    - custom_skel_files.matched > 0  # Ensure that files were found
+  become: true
