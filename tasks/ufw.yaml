@@ -7,6 +7,12 @@
   become: true
   tags: ufw
 
+- name: Reset UFW to default settings
+  community.general.ufw:
+    state: reset
+  become: true
+  tags: ufw
+
 - name: Set default UFW policies
   community.general.ufw:
     direction: incoming
@@ -14,22 +20,10 @@
   become: true
   tags: ufw
 
-- name: Retrieve UFW rules
-  ansible.builtin.command:
-    cmd: ufw status numbered
-  register: raw_ufw_status
-  changed_when: false
-  become: true
-  tags: ufw
-
-- name: Extract current UFW rules into a list
-  ansible.builtin.set_fact:
-    ufw_current_rule_list: "{{ raw_ufw_status.stdout_lines | regex_findall('\\[\\s?\\d+\\]\\s+(\\S+/(?:tcp|udp))') | sort | unique }}"
-  tags: ufw
-
-- name: Debug ufw_current_rule_list
+- name: Debug open_ports
   ansible.builtin.debug:
-    msg: "{{ ufw_current_rule_list }}"
+    msg: "{{ open_ports }}"
+  when: open_ports is defined
   tags: ufw
 
 - name: Convert open_ports to ufw_rules format
@@ -38,10 +32,16 @@
   when: open_ports is defined
   tags: ufw
 
-- name: Debug open_ports_rules  # This is just for debugging
+- name: Debug open_ports_rules
   ansible.builtin.debug:
     msg: "{{ open_ports_rules }}"
   when: open_ports is defined
+  tags: ufw
+
+- name: Debug ufw_rules
+  ansible.builtin.debug:
+    msg: "{{ ufw_rules }}"
+  when: ufw_rules is defined
   tags: ufw
 
 - name: Combine open_ports and ufw_rules
@@ -49,7 +49,7 @@
     combined_ufw_rules: "{{ open_ports_rules | default([]) + (ufw_rules | default([])) }}"
   tags: ufw
 
-- name: Debug combined_ufw_rules  # This is just for debugging
+- name: Debug combined_ufw_rules
   ansible.builtin.debug:
     msg: "{{ combined_ufw_rules }}"
   tags: ufw
@@ -64,30 +64,6 @@
   loop: "{{ combined_ufw_rules }}"
   become: true
   tags: ufw
-
-- name: Format combined_ufw_rules for comparison
-  ansible.builtin.set_fact:
-    formatted_combined_ufw_rules: "{{ combined_ufw_rules | map('json_query', '[port, proto]') | map('join', '/') | list }}"
-  tags: ufw
-
-- name: Debug formatted_combined_ufw_rules  # This is just for debugging
-  ansible.builtin.debug:
-    msg: "{{ formatted_combined_ufw_rules }}"
-  tags: ufw
-
-- name: Identify rules to be removed
-  ansible.builtin.set_fact:
-    rules_to_remove: "{{ ufw_current_rule_list | difference(formatted_combined_ufw_rules) }}"
-  tags: ufw
-
-- name: Remove UFW rules not in combined_ufw_rules
-  ansible.builtin.command:
-    cmd: "ufw delete allow {{ item.split('/')[0] }}/{{ item.split('/')[1] }}"
-  loop: "{{ rules_to_remove }}"
-  become: true
-  when: rules_to_remove | length > 0
-  tags: ufw
-  changed_when: false
 
 - name: Enable UFW
   community.general.ufw:
