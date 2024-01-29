@@ -55,6 +55,11 @@
     combined_ufw_rules: "{{ open_ports_rules | default([]) + ufw_rules | default([]) }}"
   tags: ufw
 
+- name: Debug combined_ufw_rules
+  ansible.builtin.debug:
+    msg: "{{ combined_ufw_rules }}"
+  tags: ufw
+
 - name: Apply UFW rules from combined_ufw_rules
   community.general.ufw:
     rule: "{{ item.rule }}"
@@ -69,6 +74,16 @@
 - name: Format combined_ufw_rules for comparison
   ansible.builtin.set_fact:
     formatted_ufw_rules: "{{ combined_ufw_rules | map('json_query', '[rule, src, to, port, proto]') | map('join', '/') | map('regex_replace', '/$', '') | list }}"
+  tags: ufw
+
+- name: Debug ufw_current_rule_list
+  ansible.builtin.debug:
+    msg: "{{ ufw_current_rule_list }}"
+  tags: ufw
+
+- name: Debug formatted_ufw_rules
+  ansible.builtin.debug:
+    msg: "{{ formatted_ufw_rules }}"
   tags: ufw
 
 - name: Identify rules to be removed
