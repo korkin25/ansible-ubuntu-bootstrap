@@ -58,7 +58,7 @@
   community.general.ufw:
     rule: "{{ item.rule }}"
     src: "{{ item.src | default(omit) }}"
-    to: "{{ item.to | default(omit) }}"
+    dest: "{{ item.to | default(omit) }}"
     port: "{{ item.port | default(omit) }}"
     proto: "{{ item.proto | default(omit) }}"
   loop: "{{ combined_ufw_rules }}"
