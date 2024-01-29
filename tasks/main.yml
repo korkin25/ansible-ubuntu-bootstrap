@@ -19,5 +19,5 @@
 - name: Install packages
   ansible.builtin.import_tasks: packages.yaml
 
-- name: Firewlall setup
+- name: Firewall setup
   ansible.builtin.import_tasks: ufw.yaml
