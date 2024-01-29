@@ -10,7 +10,7 @@
 - name: Set default UFW policies
   community.general.ufw:
     direction: incoming
-    policy: deny
+    policy: allow
   become: true
   tags: ufw
 
@@ -32,21 +32,51 @@
     msg: "{{ ufw_current_rule_list }}"
   tags: ufw
 
-- name: Allow incoming connections on specific ports {{ open_ports }}}
+- name: Debug open_ports
+  ansible.builtin.debug:
+    msg: "{{ open_ports }}"
+  when: open_ports is defined
+  tags: ufw
+
+- name: Convert open_ports to ufw_rules format
+  ansible.builtin.set_fact:
+    open_ports_rules: "{{ open_ports | map('regex_replace', '^(\\d+)/(tcp|udp)$', '{\"rule\": \"allow\", \"port\": \"\\1\", \"proto\": \"\\2\"}') | map('from_yaml') | list }}"
+  when: open_ports is defined
+  tags: ufw
+
+- name: Debug open_ports_rules
+  ansible.builtin.debug:
+    msg: "{{ open_ports_rules }}"
+  when: open_ports is defined
+  tags: ufw
+
+- name: Combine open_ports and ufw_rules
+  ansible.builtin.set_fact:
+    combined_ufw_rules: "{{ open_ports_rules | default([]) + ufw_rules }}"
+  tags: ufw
+
+- name: Apply UFW rules from combined_ufw_rules
   community.general.ufw:
-    rule: allow
-    port: "{{ item.split('/')[0] }}"
-    proto: "{{ item.split('/')[1] }}"
-  loop: "{{ open_ports }}"
+    rule: "{{ item.rule }}"
+    src: "{{ item.src | default(omit) }}"
+    to: "{{ item.to | default(omit) }}"
+    port: "{{ item.port | default(omit) }}"
+    proto: "{{ item.proto | default(omit) }}"
+  loop: "{{ combined_ufw_rules }}"
   become: true
+  tags: ufw
+
+- name: Format combined_ufw_rules for comparison
+  ansible.builtin.set_fact:
+    formatted_ufw_rules: "{{ combined_ufw_rules | map('json_query', '[rule, src, to, port, proto]') | map('join', '/') | map('regex_replace', '/$', '') | list }}"
   tags: ufw
 
 - name: Identify rules to be removed
   ansible.builtin.set_fact:
-    rules_to_remove: "{{ ufw_current_rule_list | difference(open_ports) }}"
+    rules_to_remove: "{{ ufw_current_rule_list | difference(formatted_ufw_rules) }}"
   tags: ufw
 
-- name: Remove UFW rules not in open_ports {{ rules_to_remove }}}
+- name: Remove UFW rules not in combined_ufw_rules
   ansible.builtin.command:
     cmd: "ufw delete allow {{ item.split('/')[0] }}/{{ item.split('/')[1] }}"
   loop: "{{ rules_to_remove }}"
