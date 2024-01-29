@@ -52,7 +52,7 @@
 
 - name: Combine open_ports and ufw_rules
   ansible.builtin.set_fact:
-    combined_ufw_rules: "{{ open_ports_rules | default([]) + ufw_rules }}"
+    combined_ufw_rules: "{{ open_ports_rules | default([]) + ufw_rules | default([]) }}"
   tags: ufw
 
 - name: Apply UFW rules from combined_ufw_rules
