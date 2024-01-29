@@ -16,7 +16,7 @@
 - name: Set default UFW policies
   community.general.ufw:
     direction: incoming
-    policy: allow
+    policy: deny
   become: true
   tags: ufw
 
