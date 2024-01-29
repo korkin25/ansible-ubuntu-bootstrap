@@ -76,6 +76,12 @@
     rules_to_remove: "{{ ufw_current_rule_list | difference(formatted_ufw_rules) }}"
   tags: ufw
 
+- name: Debug rules_to_remove
+  ansible.builtin.debug:
+    msg: "{{ rules_to_remove }}"
+  when: rules_to_remove | length > 0
+  tags: ufw
+
 - name: Remove UFW rules not in combined_ufw_rules
   ansible.builtin.command:
     cmd: "ufw delete allow {{ item.split('/')[0] }}/{{ item.split('/')[1] }}"
