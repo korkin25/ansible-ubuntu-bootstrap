@@ -11,7 +11,6 @@
     that:
       - "ansible_version.full is version('2.14', '>=')"
     fail_msg: "This playbook requires Ansible 2.14 or higher"
-  run_once: true
 
 - name: Populate skel files
   ansible.builtin.import_tasks: skel_setup.yaml
