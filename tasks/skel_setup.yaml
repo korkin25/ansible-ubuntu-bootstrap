@@ -1,3 +1,4 @@
+---
 - name: Default skel files | Check that files/skel/ the exists
   ansible.builtin.find:
     paths: files/skel/
